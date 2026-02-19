@@ -88,6 +88,66 @@ def count():
 
     return jsonify(count=n)
 
+
+@app.route("/status", methods=["GET"])
+def status():
+    # -------------------------
+    # 1️⃣ count : nb d’événements en base
+    # -------------------------
+    count = 0
+    if os.path.exists(DB_PATH):
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        try:
+            cursor.execute("SELECT COUNT(*) FROM events")
+            count = cursor.fetchone()[0]
+        except Exception:
+            count = 0
+
+        conn.close()
+
+    # -------------------------
+    # 2️⃣ dernier backup
+    # -------------------------
+    last_backup_file = None
+    backup_age_seconds = None
+
+    if os.path.exists(BACKUP_DIR):
+        backups = [
+            f for f in os.listdir(BACKUP_DIR)
+            if f.endswith(".db")
+        ]
+
+        if backups:
+            # fichier le plus récent
+            backups.sort(
+                key=lambda f: os.path.getmtime(
+                    os.path.join(BACKUP_DIR, f)
+                ),
+                reverse=True
+            )
+
+            last_backup_file = backups[0]
+
+            last_backup_path = os.path.join(
+                BACKUP_DIR, last_backup_file
+            )
+
+            backup_age_seconds = int(
+                time.time() - os.path.getmtime(last_backup_path)
+            )
+
+    # -------------------------
+    # réponse JSON
+    # -------------------------
+    return jsonify({
+        "count": count,
+        "last_backup_file": last_backup_file,
+        "backup_age_seconds": backup_age_seconds
+    })
+
+
 # ---------- Main ----------
 if __name__ == "__main__":
     init_db()
