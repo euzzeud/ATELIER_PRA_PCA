@@ -144,7 +144,7 @@ def status():
 
 @app.get("/status")
 def hello():
-    #init_db()
+    init_db()
     return jsonify(status="route status")
 
 # ---------- Main ----------
