@@ -231,27 +231,47 @@ Faites preuve de pédagogie et soyez clair dans vos explications et procedures d
 **Exercice 1 :**  
 Quels sont les composants dont la perte entraîne une perte de données ?  
   
-*..Répondez à cet exercice ici..*
+Les composants dont la perte peut entraîner une perte de données sont PVC pra-data, la base de données est stockée sur ce volume. Le PVC pra-backup contient les sauvegardes faites toutes les minutes depuis pra-data donc si on perds ce volume, on perds les données et les points de restauration
+
+À l’inverse,un pod n'as pas les données, donc sa suppression n'entraine pas de perte de données.
 
 **Exercice 2 :**  
 Expliquez nous pourquoi nous n'avons pas perdu les données lors de la supression du PVC pra-data  
   
-*..Répondez à cet exercice ici..*
+Des sauvegardes existent sur pra-backup (faites toutes les minutes par Cron). J'ai éxécuté une procédure de restauration via un Job (sqlite-restore) qui prend le dernier fichier .db dans /backup, le copie vers /data/app.db (donc dans le PVC pra-data est recré).
 
 **Exercice 3 :**  
 Quels sont les RTO et RPO de cette solution ?  
   
-*..Répondez à cet exercice ici..*
+RPO (Recovery Point Objective)
+
+Ce sont les points de restauration créés toutes les minutes via Cron.
+
+Ici, le RPO est 1 minute.
+
+RTO (Recovery Time Objective)
+
+C'est le temps nécessaire pour restaurer l'environnement de production.
+
+Le PCA (perte d'un pod) : le service revient dès que Kubernetes recrée le pod (dans les secondes qui suivent).
+
+A contrario, le PRA (perte de pra-data), peut prendre plus de temps car il nécessite des actions manuelles pour réappliquer l’infra et lancer le job de restore.
 
 **Exercice 4 :**  
-Pourquoi cette solution (cet atelier) ne peux pas être utilisé dans un vrai environnement de production ? Que manque-t-il ?   
-  
-*..Répondez à cet exercice ici..*
+Pourquoi cette solution (cet atelier) ne peux pas être utilisé dans un vrai environnement de production ? Que manque-t-il ? 
+
+Cette solution ne peut pas être utiliser dans un environement de production, car elle est risquée. En effet, ici, le backup et la prod restent dans le même environnement Kubernetes. Kubernetes ne gère pas la restauration tout seul et la PRA est n'est pas automatique. Enfin, un PVC local au cluster ne protège pas d’une perte du cluster et du stockage.
   
 **Exercice 5 :**  
 Proposez une archtecture plus robuste.   
   
-*..Répondez à cet exercice ici..*
+Sauvegardes externalisées (hors cluster) : au lieu d’un PVC pra-backup, pousser les backups vers un stockage objet (S3-like) + rétention/versioning. (Objectif : ne pas perdre backup + prod en même temps).
+
+Stockage HA / multi-nœuds pour la donnée (au minimum, une solution de storage distribuée côté cluster).
+
+Réplication multi-zone / multi-cluster si besoin de tolérance à la perte d’un site.
+
+PRA industrialisé : un runbook clair + tests de restauration réguliers (et idéalement automatisation).
 
 ---------------------------------------------------
 Séquence 6 : Ateliers  
