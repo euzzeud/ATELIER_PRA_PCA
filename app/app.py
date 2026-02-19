@@ -4,6 +4,7 @@ from datetime import datetime
 from flask import Flask, jsonify, request
 
 DB_PATH = os.getenv("DB_PATH", "/data/app.db")
+BACKUP_DIR = os.getenv("BACKUP_DIR", "/backup")
 
 app = Flask(__name__)
 
@@ -89,23 +90,16 @@ def count():
     return jsonify(count=n)
 
 
-@app.route("/status", methods=["GET"])
+@app.route("/status1", methods=["GET"])
 def status():
+    init_db()
     # -------------------------
     # 1️⃣ count : nb d’événements en base
     # -------------------------
-    count = 0
-    if os.path.exists(DB_PATH):
-        conn = sqlite3.connect(DB_PATH)
-        cursor = conn.cursor()
-
-        try:
-            cursor.execute("SELECT COUNT(*) FROM events")
-            count = cursor.fetchone()[0]
-        except Exception:
-            count = 0
-
-        conn.close()
+    conn = get_conn()
+    cur = conn.execute("SELECT COUNT(*) FROM events")
+    count = cur.fetchone()[0]
+    conn.close()
 
     # -------------------------
     # 2️⃣ dernier backup
@@ -147,6 +141,11 @@ def status():
         "backup_age_seconds": backup_age_seconds
     })
 
+
+@app.get("/status")
+def hello():
+    init_db()
+    return jsonify(status="route status")
 
 # ---------- Main ----------
 if __name__ == "__main__":
